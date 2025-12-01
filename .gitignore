@@ -1,3 +1,11 @@
+# latex compile files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.out
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

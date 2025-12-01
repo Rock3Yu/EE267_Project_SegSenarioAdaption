@@ -1,0 +1,85 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=2.5cm,right=2.5cm,marginparwidth=1.75cm]{geometry}
+\usepackage{multicol}
+\usepackage{parskip}
+
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{float}
+
+\title{EE267 Final Project Report\\Panoptic Segmentation for Autonomous Driving\\across Diverse Weather Conditions}
+
+
+\author{Hefeifei Jiang, Kunyi Yu}
+
+\begin{document}
+\maketitle
+\begin{multicols}{2}
+\setlength{\parskip}{0.1in}
+\setlength{\parindent}{15pt}
+
+\begin{abstract}
+\textcolor{red}{todo}
+\begin{enumerate}
+\item State the \textbf{problem}, \textbf{challenges}, \textbf{existing solutions}, and \textbf{why they are insufficient}.
+\item Summarize the \textbf{core contributions} of the project and detail the design and implementation.
+\item Present \textbf{design details} and \textbf{corresponding evaluations}, including comparisons to \textbf{baselines/existing solutions} and \textbf{ablation studies} of design components.
+\end{enumerate}
+\end{abstract}
+
+\textbf{Keywords:} Autonomous Driving, Panoptic Segmentation, Diverse Weather Conditions
+
+% \newcolumn
+\section{Introduction}
+Autonomous vehicles (AVs) are rapidly advancing, promising to reform transportation systems. Perception as the foundation of AVs plays a important role in capturing the surrounding environment accurately, then planning and decision-making modules can make safe and efficient driving behaviors. Panoptic segmentation, combining semantic and instance segmentation, yields a comprehensive reasoning of the scene, which is critical for AVs to understand both the categories (e.g., drivable areas, sidewalks, pedestrians) and individual objects (e.g., 3 cars at different locations).
+
+However, the accuracy and robustness of panoptic segmentation models can be significantly affected by diverse weather conditions, such as rain, fog, and snow. These corner cases introduce huge challenges for AVs' perception systems as well as following planning and decision-making modules. The performance decline in low-visibility scenarios can lead to higher risks of accidents and a sense of mistrust when deploying AVs in bussiness applications.
+
+In this project, we aim to research the popular and state-of-the-art panoptic segmentation models, and evaluate their performance across diverse weather conditions. After that, we will collect different weather perception datasets with ground truth annotations from CARLA simulator (\textcolor{red}{todo} or directly use existing datasets). Based on the evaluation results, we will try to modify and improve some promising panoptic segmentation models to improve their performance in diverse weather conditions. Finally, we will conduct ablation studies to analyze the effectiveness of our proposed improvements.
+
+The core contributions of this project are summarized as follows:
+\begin{itemize}
+    \item Conduct a comprehensive research on existing panoptic segmentation models.
+    \item Collect and preprocess a diverse weather perception dataset with ground truth annotations. (\textcolor{red}{maybe})
+    \item Evaluate the performance of selected models across diverse weather conditions.
+    \item Propose and implement improvements to enhance model robustness.
+\end{itemize}
+
+\section{Related Work}
+
+\newcolumn
+\section{Methodology}
+
+\section{Experiments}
+\subsection{Dataset}
+\subsection{Results and Analysis}
+\subsection{Ablation Study}
+
+\section{Conclusion}
+
+
+\newcolumn
+% ref:
+\section*{References}
+% Use google scholar, cite APA style 
+[1] Erkent, Ö., \& Laugier, C. (2020). Semantic segmentation with unsupervised domain adaptation under varying weather conditions for autonomous vehicles. IEEE Robotics and Automation Letters, 5(2), 3580-3587.
+
+[2] 111
+
+\section*{Appendix}
+111
+
+
+\end{multicols}
+\end{document}
