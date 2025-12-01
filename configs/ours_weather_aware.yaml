@@ -1,0 +1,13 @@
+base_cfg: configs/base.yaml
+experiment_name: weather_aware_full
+use_weather_aug: true
+use_balanced_sampler: true
+all_weathers: ["clear", "rain", "night"]
+stage1_epochs: 12
+stage2_epochs: 9
+stage3_epochs: 9
+sampler_weights:
+  clear: 1.0
+  rain: 2.0
+  night: 3.0
+save_path: ./logs/checkpoints/weather_aware_full.pth

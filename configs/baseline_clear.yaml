@@ -1,0 +1,6 @@
+base_cfg: configs/base.yaml
+experiment_name: baseline_clear
+train_weathers: ["clear"]
+val_weathers: ["clear", "rain", "night"]
+use_weather_aug: false
+save_path: ./logs/checkpoints/baseline_clear.pth

@@ -1,0 +1,22 @@
+experiment_name: base_experiment
+data_root: ./data
+train_list: ./data/splits/train.txt
+val_list: ./data/splits/val.txt
+train_weathers: ["clear", "rain", "night"]
+val_weathers: ["clear", "rain", "night"]
+test_weathers: ["clear", "rain", "night"]
+image_size: [512, 256]
+batch_size: 4
+num_workers: 4
+num_classes: 20
+epochs: 30
+lr: 0.0002
+weight_decay: 0.0001
+ignore_index: 255
+seed: 42
+save_dir: ./logs/checkpoints
+log_dir: ./logs
+tensorboard_log_dir: ./logs/tensorboard
+use_weather_aug: false
+pretrained_backbone: true
+optimizer: adamw
