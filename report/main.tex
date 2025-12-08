@@ -74,7 +74,7 @@ To summarize, while significant progress and various techniques have been develo
 This section describes the overall methodology of our project, including dataset collection and preprocessing, model selection, training strategies, and evaluation metrics. The proposed training strategies ``Mixed-Weather Training'' and ``Weather-Aware Curriculum Learning'' is one of our core contributions.
 
 \subsection{Dataset Collection and Preprocessing}
-We utilize the CARLA simulator version 0.9.15 to collect a diverse weather perception dataset with ground truth annotations. The simulator uses the provided docker image from EE267 lab0. After launching the CARLA server, we run a Python script to spawn an ego vehicle and other random vehicles, pedestrians with autopilot mode enabled. The camera sensor is set up at a height of 1.6 meters from the ground, with a field of view (FOV) of 90 degrees and a resolution of 1280x720 pixels.
+We utilize the CARLA simulator version 0.9.15 to collect a diverse weather perception dataset with ground truth annotations. The simulator uses the provided docker image from EE267 lab0. After launching the CARLA server, we run a Python script to spawn an ego vehicle and other random vehicles, pedestrians with autopilot mode enabled. The camera sensor is set up at a height of 1.6 meters from the ground, with a field of view (FOV) of 90 degrees and a resolution of 512x512 pixels.
 
 We define several weather conditions and time of day settings in CARLA. The weather conditions include \textit{Clear}, \textit{SoftRain}, and \textit{HardRain}, while the time of day settings include \textit{Noon}, \textit{Sunset}, and \textit{Night}, resulting in a total of 9 different weather-time combinations. A demostation of different weather conditions is shown in Figure~\ref{fig:weather_conditions}.
 
@@ -104,19 +104,35 @@ At the time of writing, we mainly focus on DeepLab V3 for performance evaluation
 \end{figure}
 
 \subsection{Training Strategies}
-In the training process, we test three different training strategies: (1) Clear-Only Training, (2) Mixed-Weather Training, and (3) Weather-Aware Curriculum Learning.
+In the training process, we evaluate three different training strategies: 
+(1) Clear-Only Training, 
+(2) Mixed-Weather Training, and 
+(3) Weather-Aware Curriculum Learning. 
+These settings are designed to examine how different levels of weather diversity in training data affect model robustness and generalization.
 
-First, Clear-Only Training
+\paragraph{Clear-Only Training (Setting 0).}
+In this baseline setting, the model is trained exclusively on clear-weather images and evaluated across all weather conditions. 
+This configuration measures the inherent domain gap caused by weather variations, as the model receives no exposure to rain or nighttime conditions during training. 
+Although this strategy is computationally efficient and widely used in autonomous-driving perception benchmarks, it typically results in severe performance degradation when the model is deployed outside clear-weather environments.
 
+\paragraph{Mixed-Weather Training (Setting 1).}
+In this strategy, training images from all available weather conditions (clear, rain, and night) are randomly mixed within each batch. 
+This simple multi-domain training approach is commonly adopted for improving robustness and serves as a strong reference point. 
+By exposing the model to diverse weather conditions during training, mixed-weather learning mitigates clear-weather bias; however, it does not explicitly address the imbalance among weather domains and may underfit rare or difficult conditions.
 
+\paragraph{Weather-Aware Curriculum Learning (Setting 2).}
+The third strategy adopts a progressive curriculum that gradually increases weather difficulty while balancing the sampling ratios across conditions. 
+Training proceeds in three stages:
 
+\begin{itemize}
+    \item \textbf{Stage 1:} Clear weather only.
+    \item \textbf{Stage 2:} Clear + SoftRain with a 50:50 sampling ratio.
+    \item \textbf{Stage 3:} Clear + SoftRain + HardRain with a sampling ratio of 10:20:70.
+\end{itemize}
 
-
-
-
-
-
-\newcolumn
+This curriculum design allows the model to first acquire stable feature representations under easy conditions before being exposed to progressively more challenging weather. 
+The balanced sampling explicitly counteracts the natural imbalance between clear and adverse-weather images, ensuring sufficient training on rare but safety-critical scenarios such as heavy rain. 
+Overall, this strategy aims to enhance generalization under diverse weather conditions while avoiding the instability or overfitting commonly observed in direct multi-weather training.
 
 \subsection{Metric}
 To be same with the related work, we use mean Intersection over Union (mIoU) as the sole evaluation metric for semantic segmentation performance across different weather conditions. The IoU for each class is calculated as the ratio of the intersection area to the union area between the predicted segmentation and the ground truth segmentation. The mIoU is then computed as the average IoU across all classes. formally, for a given class \( c \), the IoU is defined as:
@@ -136,21 +152,40 @@ where \( N \) is the total number of classes. This metric provides a comprehensi
     \label{fig:iou}
 \end{figure}
 
-\newcolumn
 \section{Experiments}\label{sec:experiments}
-\subsection{Dataset}
+This section presents the experimental setup, results, and analysis of our proposed methodology.
+
+\subsection{Experimental Setup}
+All experiments are conducted on a machine with the following specifications:
+\begin{itemize}
+    \item \textbf{GPU:} NVIDIA GeForce RTX 5080 with 16GB VRAM
+    \item \textbf{CPU:} Intel Core Ultra 7 265K @ 5.50GHz
+    \item \textbf{RAM:} 32GB DDR4
+    \item \textbf{Operating System:} Ubuntu 22.04 LTS
+    \item \textbf{Python Version:} Python 3.10
+    \item \textbf{Framework:} PyTorch 2.7.1 (for CUDA 12.8)
+    \item \textbf{CARLA Version:} 0.9.15
+    \item \textbf{Epochs:} 100
+\end{itemize}
+
+For more information about the experimental setup, please refer to our GitHub repository (README.md, requirements.txt and other files).
+
 \subsection{Results and Analysis}
+
+
+
 \subsection{Ablation Study}
 
 \section{Conclusion}\label{sec:conclusion}
 
 
 \newcolumn
+\section*{Acknowledgements}
+We would like to express our sincere gratitude to Professor Hang Qiu, our teaching assistants Shilpa Mukhopadhyay and all of the EE267 course staff for their invaluable support and guidance throughout this project.
+
+Wishing everyone a great winter break and a happy new year!
+
 \bibliography{references}
-
-% \section*{Appendix}
-% 111
-
 
 \end{multicols}
 \end{document}
