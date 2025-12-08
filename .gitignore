@@ -5,6 +5,8 @@
 *.log
 *.synctex.gz
 *.out
+*.bbl
+*.blg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
