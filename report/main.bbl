@@ -1,0 +1,73 @@
+\begin{thebibliography}{10}
+
+\bibitem{dosovitskiy2017carla}
+Alexey Dosovitskiy, German Ros, Felipe Codevilla, Antonio Lopez, and Vladlen Koltun.
+\newblock Carla: An open urban driving simulator.
+\newblock In {\em Conference on robot learning}, pages 1--16. PMLR, 2017.
+
+\bibitem{hao2020brief}
+Shijie Hao, Yuan Zhou, and Yanrong Guo.
+\newblock A brief survey on semantic segmentation with deep learning.
+\newblock {\em Neurocomputing}, 406:302--321, 2020.
+
+\bibitem{everingham2011pascal}
+Mark Everingham and John Winn.
+\newblock The pascal visual object classes challenge 2012 (voc2012) development kit.
+\newblock {\em Pattern Analysis, Statistical Modelling and Computational Learning, Tech. Rep}, 8(5):2--5, 2011.
+
+\bibitem{sakaridis2018semantic}
+Christos Sakaridis, Dengxin Dai, and Luc Van~Gool.
+\newblock Semantic foggy scene understanding with synthetic data.
+\newblock {\em International Journal of Computer Vision}, 126(9):973--992, 2018.
+
+\bibitem{tung2017raincouver}
+Frederick Tung, Jianhui Chen, Lili Meng, and James~J Little.
+\newblock The raincouver scene parsing benchmark for self-driving in adverse weather and at night.
+\newblock {\em IEEE Robotics and Automation Letters}, 2(4):2188--2193, 2017.
+
+\bibitem{sakaridis2021acdc}
+Christos Sakaridis, Haoran Wang, Ke~Li, Ren{\'e} Zurbr{\"u}gg, Arpit Jadon, Wim Abbeloos, Daniel~Olmeda Reino, Luc Van~Gool, and Dengxin Dai.
+\newblock Acdc: The adverse conditions dataset with correspondences for robust semantic driving scene perception.
+\newblock {\em arXiv preprint arXiv:2104.13395}, 2021.
+
+\bibitem{zendel2023test}
+Oliver Zendel.
+\newblock {\em Test data for dependable computer vision applications}.
+\newblock PhD thesis, Technische Universit{\"a}t Wien, 2023.
+
+\bibitem{zhu2017unpaired}
+Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei~A Efros.
+\newblock Unpaired image-to-image translation using cycle-consistent adversarial networks.
+\newblock In {\em Proceedings of the IEEE international conference on computer vision}, pages 2223--2232, 2017.
+
+\bibitem{hoffman2018cycada}
+Judy Hoffman, Eric Tzeng, Taesung Park, Jun-Yan Zhu, Phillip Isola, Kate Saenko, Alexei Efros, and Trevor Darrell.
+\newblock Cycada: Cycle-consistent adversarial domain adaptation.
+\newblock In {\em International conference on machine learning}, pages 1989--1998. Pmlr, 2018.
+
+\bibitem{tsai2018learning}
+Yi-Hsuan Tsai, Wei-Chih Hung, Samuel Schulter, Kihyuk Sohn, Ming-Hsuan Yang, and Manmohan Chandraker.
+\newblock Learning to adapt structured output space for semantic segmentation.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition}, pages 7472--7481, 2018.
+
+\bibitem{vora2020pointpainting}
+Sourabh Vora, Alex~H Lang, Bassam Helou, and Oscar Beijbom.
+\newblock Pointpainting: Sequential fusion for 3d object detection.
+\newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition}, pages 4604--4612, 2020.
+
+\bibitem{chen2017rethinking}
+Liang-Chieh Chen, George Papandreou, Florian Schroff, and Hartwig Adam.
+\newblock Rethinking atrous convolution for semantic image segmentation.
+\newblock {\em arXiv preprint arXiv:1706.05587}, 2017.
+
+\bibitem{long2015fully}
+Jonathan Long, Evan Shelhamer, and Trevor Darrell.
+\newblock Fully convolutional networks for semantic segmentation.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition}, pages 3431--3440, 2015.
+
+\bibitem{mehta2019espnetv2}
+Sachin Mehta, Mohammad Rastegari, Linda Shapiro, and Hannaneh Hajishirzi.
+\newblock Espnetv2: A light-weight, power efficient, and general purpose convolutional neural network.
+\newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition}, pages 9190--9200, 2019.
+
+\end{thebibliography}

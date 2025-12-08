@@ -10,7 +10,6 @@
 \usepackage{multicol}
 \usepackage{parskip}
 
-
 %% Useful packages
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -18,7 +17,10 @@
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \usepackage{float}
 
-\title{EE267 Final Project Report\\Panoptic Segmentation for Autonomous Driving\\across Diverse Weather Conditions}
+\usepackage{natbib}
+\bibliographystyle{unsrt}
+
+\title{EE267 Final Project Report (Option 1)\\Semantic Segmentation for Autonomous Driving\\across Diverse Weather Conditions}
 
 
 \author{Hefeifei Jiang, Kunyi Yu}
@@ -30,55 +32,124 @@
 \setlength{\parindent}{15pt}
 
 \begin{abstract}
-\textcolor{red}{todo}
-\begin{enumerate}
-\item State the \textbf{problem}, \textbf{challenges}, \textbf{existing solutions}, and \textbf{why they are insufficient}.
-\item Summarize the \textbf{core contributions} of the project and detail the design and implementation.
-\item Present \textbf{design details} and \textbf{corresponding evaluations}, including comparisons to \textbf{baselines/existing solutions} and \textbf{ablation studies} of design components.
-\end{enumerate}
+Semantic segmentation is essential for autonomous vehicle (AV) perception, providing pixel-level understanding of the driving environment. However, adverse weather conditions such as rain, fog, and snow can significantly impair segmentation accuracy, posing challenges to AV safety and reliability. This project investigates the robustness of state-of-the-art semantic segmentation models under diverse weather scenarios using a CARLA-simulated dataset with ground-truth annotations. We benchmark several popular architectures and introduce modifications aimed at improving performance in adverse conditions. Experimental results show consistent gains in challenging weather, demonstrating the effectiveness of our proposed enhancements. The GitHub repository is available here\footnote{\url{https://github.com/Rock3Yu/EE267_Project_SegSenarioAdaption}}.
 \end{abstract}
 
-\textbf{Keywords:} Autonomous Driving, Panoptic Segmentation, Diverse Weather Conditions
+\textbf{Keywords:} Autonomous Driving, Semantic Segmentation, Diverse Weather Conditions
 
 % \newcolumn
-\section{Introduction}
-Autonomous vehicles (AVs) are rapidly advancing, promising to reform transportation systems. Perception as the foundation of AVs plays a important role in capturing the surrounding environment accurately, then planning and decision-making modules can make safe and efficient driving behaviors. Panoptic segmentation, combining semantic and instance segmentation, yields a comprehensive reasoning of the scene, which is critical for AVs to understand both the categories (e.g., drivable areas, sidewalks, pedestrians) and individual objects (e.g., 3 cars at different locations).
+\section{Introduction}\label{sec:introduction}
+Autonomous vehicles (AVs) are rapidly advancing, promising to reform transportation systems. Perception as the foundation of AVs plays a important role in capturing the surrounding environment accurately, so that planning and decision-making modules can make safe and efficient driving behaviors. Semantic segmentation provides pixel-level understanding of the scene, which is critical for AVs to understand the categories of objects and regions (e.g., drivable areas, sidewalks, pedestrians).
 
-However, the accuracy and robustness of panoptic segmentation models can be significantly affected by diverse weather conditions, such as rain, fog, and snow. These corner cases introduce huge challenges for AVs' perception systems as well as following planning and decision-making modules. The performance decline in low-visibility scenarios can lead to higher risks of accidents and a sense of mistrust when deploying AVs in bussiness applications.
+However, the accuracy and robustness of semantic segmentation models can be significantly affected by diverse weather conditions, such as rain, fog, and snow. These corner cases introduce huge challenges for AVs' perception systems as well as following planning and decision-making modules. The performance decline in low-visibility scenarios can lead to higher risks of accidents and mistrust among society when deploying AVs in real-world environments.
 
-In this project, we aim to research the popular and state-of-the-art panoptic segmentation models, and evaluate their performance across diverse weather conditions. After that, we will collect different weather perception datasets with ground truth annotations from CARLA simulator (\textcolor{red}{todo} or directly use existing datasets). Based on the evaluation results, we will try to modify and improve some promising panoptic segmentation models to improve their performance in diverse weather conditions. Finally, we will conduct ablation studies to analyze the effectiveness of our proposed improvements.
+In this project, we research the popular and state-of-the-art semantic segmentation models, and evaluate their performance across diverse weather conditions. Besides, we collect different weather perception datasets with ground truth annotations from CARLA simulator \cite{dosovitskiy2017carla}. Based on the evaluation results, we modify and improve popular semantic segmentation models to improve their performance in diverse weather conditions. Finally, we conduct ablation studies to analyze the effectiveness of our proposed improvements.
 
 The core contributions of this project are summarized as follows:
 \begin{itemize}
-    \item Conduct a comprehensive research on existing panoptic segmentation models.
-    \item Collect and preprocess a diverse weather perception dataset with ground truth annotations. (\textcolor{red}{maybe})
+    \item Conduct a comprehensive research on existing semantic segmentation models.
+    \item Collect and preprocess a diverse weather perception dataset with ground truth annotations from CARLA simulator.
     \item Evaluate the performance of selected models across diverse weather conditions.
     \item Propose and implement improvements to enhance model robustness.
 \end{itemize}
 
-\section{Related Work}
+The rest of the report is organized as follows: Section~\ref{sec:related_work} reviews related work in semantic segmentation for autonomous driving under diverse weather conditions. Section~\ref{sec:methodology} details the methodology, including dataset collection, model selection, and proposed improvements. Section~\ref{sec:experiments} presents the experimental results and analysis. Finally, Section~\ref{sec:conclusion} concludes the report and discusses future work.
+
+\section{Related Work}\label{sec:related_work}
+\textbf{Semantic segmentation} has been widely studied in the context of autonomous driving, given its critical role in scene understanding. The models can be simply categorized into five categories: decoder-based methods, context information-based methods, GAN-based methods, RNN-based methods, and weak supervision-based methods \cite{hao2020brief}.
+
+Classic models based on decoder structures include U-Net, SegNet, and DeepLab series, where the DeepLabV3+ reaches 89.0\% mIoU on the PASCAL VOC 2012 dataset \cite{everingham2011pascal}. Context information-based methods, such as PSPNet, EncNet and DenseASPP, leverage global context or multi-scale context to enhance segmentation performance, where EncNet achieves 85.9\% mIoU of small objects on the PASCAL VOC 2012 dataset. In GAN-based methods, models like SegAN and MMANet outperform in the problem of small sample size and imbalanced class distribution but the training process is unstable. RNN-based methods, such as ReNet, ReSeg, LSTM-RNN, and Graph-LSTM, capture local sptatial features and their correlations. Lastly, weak supervision-based methods like BoxSup and DEXTR reduce the reliance on time-consuming and labor-intensive data annotation \cite{hao2020brief}.
+
+\textbf{Datasets for all-weather segmentation} are critical for the training and evaluation of many learning-based semantic segmentation models. Conditional-specific datasets provide semantic segmentation data under certain weather conditions, for example, the Foggy Cityscapes dataset \cite{sakaridis2018semantic} simulates foggy conditions based on the Cityscapes dataset, and the Raincouver benchmark \cite{tung2017raincouver} focuses on rainy weather. On the other hand, unified all-weather datasets, such as the ACDC dataset \cite{sakaridis2021acdc} contain real-world images captured under four common adverse weather conditions (fog, nighttime, rain, and snow), and the WildDash2 dataset \cite{zendel2023test} includes dashcam footage from diverse weather, lighting, and camera conditions. The pros of those datasets are that they provide comprehensive coverage of various weather scenarios, however, the cons are the high cost and incomplete senario coverage.
+
+\textbf{Data augmentation} and \textbf{Synthetic weather simulation} are increasingly studied and utilized to generate diverse weather conditions due to the nature of low cost and high flexibility. Simple data augmentation techniques include random blurring, noise addition, and brightness/contrast adjustments. Moreover, GAN-based weather translation methods, such as CycleGAN \cite{zhu2017unpaired}, can successfully translate images from clear weather to adverse weather conditions by learning the underlying distribution of weather effects. Simulation-based approaches are also popular, where CARLA simulator \cite{dosovitskiy2017carla} is one of the most widely-used platforms that can simulate various weather conditions in provided urban environments with ground truth annotations.
+
+\textbf{Domain adaption and Curriculum learning} are two effective techniques to improve the robustness of semantic segmentation models across diverse weather conditions. Adversarial feature alignment methods, like CyCADA \cite{hoffman2018cycada}, guide transfer between domains in an unsupervised manner. Pseudo-labeling self-training methods contain AdaptSegNet \cite{tsai2018learning}. Those domain adaptation methods can realize sim2real transfer as well as weather adaptation, however the performance is still limited and unstable for AV systems. Meanwhile, curriculum learning is a widely-used training manner that gradually increases the complexity of training samples which can help models learn better and generalize well especially in complex scenarios like diverse weather conditions.
+
+\textbf{Weather-specific architectures and sensor fusion} are also proposed to enhance segmentation performance in the context of extreme weather. Feature-level normalization techniques can mitigate the impact of weather-induced variations. Multi-sensor fusion approaches, combining inputs from cameras, LiDAR, radar, or other sensors, can provide a more comprehensive understanding of the environment, reduce the rise of sensor-specific failures under specific weather conditions, and improve overall segmentation accuracy. Methods like PointPainting \cite{vora2020pointpainting} demonstrates a promising result.
+
+To summarize, while significant progress and various techniques have been developed for semantic segmentation including the senarios of autonomous driving under diverse weather conditions, challenges remain in achieving robust, reliable and generalizable performance. The gap between synthetic and real-world data persists. Some methods rely heavily on transformer backbones which are computationally expensive and too slow for real-time AV applications. Moreover, mixed extreme weather conditions are rarely studied. This limiation motivates our project to further explore the robustness of basic semantic segmentation models under diverse weather conditions by using a CARLA-simulated dataset with ground-truth annotations, trying to inspire future research in this important area.
+
+\section{Methodology}\label{sec:methodology}
+This section describes the overall methodology of our project, including dataset collection and preprocessing, model selection, training strategies, and evaluation metrics. The proposed training strategies ``Mixed-Weather Training'' and ``Weather-Aware Curriculum Learning'' is one of our core contributions.
+
+\subsection{Dataset Collection and Preprocessing}
+We utilize the CARLA simulator version 0.9.15 to collect a diverse weather perception dataset with ground truth annotations. The simulator uses the provided docker image from EE267 lab0. After launching the CARLA server, we run a Python script to spawn an ego vehicle and other random vehicles, pedestrians with autopilot mode enabled. The camera sensor is set up at a height of 1.6 meters from the ground, with a field of view (FOV) of 90 degrees and a resolution of 1280x720 pixels.
+
+We define several weather conditions and time of day settings in CARLA. The weather conditions include \textit{Clear}, \textit{SoftRain}, and \textit{HardRain}, while the time of day settings include \textit{Noon}, \textit{Sunset}, and \textit{Night}, resulting in a total of 9 different weather-time combinations. A demostation of different weather conditions is shown in Figure~\ref{fig:weather_conditions}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.\linewidth,height=4cm,keepaspectratio]{pics/weather_time.png}
+    \caption{Dataset settings with different weather and time combinations.}
+    \label{fig:weather_conditions}
+\end{figure}
+
+The data annotation classes are defined based on the CARLA semantic segmentation labels, where we choose 19 classes (CityScapes Standard): \textit{Road}, \textit{Vehicle}, \textit{Pedestrian}, \textit{Building}, \textit{Sidewalk}, \textit{Vegetation}, etc.
+
+As for data collection, we run the simulation for each weather-time combination, capturing images and their corresponding semantic segmentation masks at a frequency of 1 frame per 10 seconds to 20 seconds, depending on whether the scene is dynamic enough. We collect a total of 3,600 images where each weather-time combination has around 400 images. The dataset is then split into training and testing sets with an 80-20 ratio.
+
+\subsection{Model Selection}
+We select several popular and representative semantic segmentation models for evaluation and further improvement, including: (1) DeepLab V3, (2) FCN, and (3) Lite R-ASPP. These models are widedly used in the studies and as benchmarks for semantic segmentation tasks and their parameters are all pre-trained on a 20-class subset of the COCO dataset.
+
+DeepLab V3 \cite{chen2017rethinking} utilizes atrous convolution and spatial pyramid pooling to capture multi-scale context information effectively. FCN \cite{long2015fully} is one of the pioneering models that introduced the concept of fully convolutional networks for semantic segmentation, enabling end-to-end training and inference. Lite R-ASPP \cite{mehta2019espnetv2} is a lightweight model designed for real-time applications, employing a reduced Atrous Spatial Pyramid Pooling (ASPP) module to balance accuracy and efficiency.
+
+At the time of writing, we mainly focus on DeepLab V3 for performance evaluation and other model implementations are in our future work plan. The structures overview of DeepLab V3 is shown in Figure~\ref{fig:deeplabv3_structure}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.\linewidth,height=6cm,keepaspectratio]{pics/deeplabv3_structure.png}
+    \caption{DeepLab V3 structure overview \cite{chen2017rethinking}.}
+    \label{fig:deeplabv3_structure}
+\end{figure}
+
+\subsection{Training Strategies}
+In the training process, we test three different training strategies: (1) Clear-Only Training, (2) Mixed-Weather Training, and (3) Weather-Aware Curriculum Learning.
+
+First, 
+
+
+
+
+
+
+
+
 
 \newcolumn
-\section{Methodology}
 
-\section{Experiments}
+\subsection{Metric}
+To be same with the related work, we use mean Intersection over Union (mIoU) as the sole evaluation metric for semantic segmentation performance across different weather conditions. The IoU for each class is calculated as the ratio of the intersection area to the union area between the predicted segmentation and the ground truth segmentation. The mIoU is then computed as the average IoU across all classes. formally, for a given class \( c \), the IoU is defined as:
+
+$$IoU_c = \frac{TP_c}{TP_c + FP_c + FN_c}$$
+
+where \( TP_c \) is the number of true positive pixels for class \( c \), \( FP_c \) is the number of false positive pixels, and \( FN_c \) is the number of false negative pixels. The mIoU is then calculated as:
+
+$$mIoU = \frac{1}{N} \sum_{c=1}^{N} IoU_c$$
+
+where \( N \) is the total number of classes. This metric provides a comprehensive measure of segmentation accuracy, accounting for both false positives and false negatives across all classes. A higher mIoU indicates better segmentation performance. The following Figure~\ref{fig:iou} illustrates the visual representation of IoU.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\linewidth,height=4cm,keepaspectratio]{pics/iou.png}
+    \caption{IoU visual representation (image from the internet).}
+    \label{fig:iou}
+\end{figure}
+
+\newcolumn
+\section{Experiments}\label{sec:experiments}
 \subsection{Dataset}
 \subsection{Results and Analysis}
 \subsection{Ablation Study}
 
-\section{Conclusion}
+\section{Conclusion}\label{sec:conclusion}
 
 
 \newcolumn
-% ref:
-\section*{References}
-% Use google scholar, cite APA style 
-[1] Erkent, Ö., \& Laugier, C. (2020). Semantic segmentation with unsupervised domain adaptation under varying weather conditions for autonomous vehicles. IEEE Robotics and Automation Letters, 5(2), 3580-3587.
+\bibliography{references}
 
-[2] 111
-
-\section*{Appendix}
-111
+% \section*{Appendix}
+% 111
 
 
 \end{multicols}
