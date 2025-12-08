@@ -8,14 +8,14 @@ from typing import Any, Dict, Mapping, MutableMapping, Optional
 import numpy as np
 import torch
 import yaml
-try:  # tensorboard 可能未安装
+try:  # tensorboard may not be installed
     from torch.utils.tensorboard import SummaryWriter
 except ImportError:  # pragma: no cover
     SummaryWriter = None  # type: ignore[assignment]
 
 
 class AverageMeter:
-    """简单的平均器，便于统计loss等指标。"""
+    """Simple average meter for statistics like loss."""
 
     def __init__(self, name: str = "avg") -> None:
         self.name = name
@@ -102,11 +102,11 @@ def create_summary_writer(
     sub_dir: Optional[str] = None,
 ) -> SummaryWriter:
     """
-    创建 TensorBoard SummaryWriter，自动处理目录。
+    Create TensorBoard SummaryWriter, automatically handle directories.
     """
 
     if SummaryWriter is None:
-        raise RuntimeError("当前环境未安装 tensorboard，执行 `pip install tensorboard` 即可启用记录功能")
+        raise RuntimeError("tensorboard is not installed in current environment, run `pip install tensorboard` to enable logging")
     base = Path(log_dir).expanduser().resolve()
     parts = [p for p in [experiment_name, sub_dir] if p]
     writer_dir = base.joinpath(*parts) if parts else base

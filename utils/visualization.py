@@ -39,7 +39,7 @@ def _ensure_palette(num_classes: int, palette: Sequence[Tuple[int, int, int]] | 
         palette = DEFAULT_PALETTE
     if len(palette) >= num_classes:
         return palette
-    # 若颜色不足，扩展随机颜色但保持可复现
+    # If colors are insufficient, extend with random colors but keep reproducible
     rng = np.random.default_rng(seed=1234)
     palette = list(palette)
     while len(palette) < num_classes:

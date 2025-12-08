@@ -1,15 +1,15 @@
 experiment_name: base_experiment
-data_root: ./data
-train_list: ./data/splits/train.txt
-val_list: ./data/splits/val.txt
+data_root: ../data  # 相对配置文件目录，指向仓库根下的 data/
+train_list: /home/jiang/EE267/FinalProject/EE267_Project_SegSenarioAdaption/data/splits/train.txt
+val_list: /home/jiang/EE267/FinalProject/EE267_Project_SegSenarioAdaption/data/splits/val.txt
 train_weathers: ["clear", "rain", "night"]
 val_weathers: ["clear", "rain", "night"]
 test_weathers: ["clear", "rain", "night"]
-image_size: [512, 256]
-batch_size: 4
+image_size: [512, 512]
+batch_size: 8
 num_workers: 4
 num_classes: 20
-epochs: 30
+epochs: 100
 lr: 0.0002
 weight_decay: 0.0001
 ignore_index: 255
@@ -19,4 +19,6 @@ log_dir: ./logs
 tensorboard_log_dir: ./logs/tensorboard
 use_weather_aug: false
 pretrained_backbone: true
+use_group_norm: true
 optimizer: adamw
+eval_per_weather: true

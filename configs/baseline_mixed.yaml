@@ -1,6 +1,16 @@
-base_cfg: configs/base.yaml
+base_cfg: base.yaml
 experiment_name: baseline_mixed
-train_weathers: ["clear", "rain", "night"]
-val_weathers: ["clear", "rain", "night"]
+# 使用具体天气名称，与数据目录一致
+train_weathers: [
+  "clearnoon", "clearsunset", "clearnight",
+  "softrainnoon", "softrainsunset", "softrainnight",
+  "hardrainnoon", "hardrainsunset", "hardrainnight"
+]
+val_weathers: [
+  "clearnoon", "clearsunset", "clearnight",
+  "softrainnoon", "softrainsunset", "softrainnight",
+  "hardrainnoon", "hardrainsunset", "hardrainnight"
+]
 use_weather_aug: false
+eval_per_weather: true
 save_path: ./logs/checkpoints/baseline_mixed.pth

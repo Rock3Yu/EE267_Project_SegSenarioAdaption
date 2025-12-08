@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
-"""CARLA 多天气数据采集脚本。
+"""CARLA multi-weather data collection script.
 
-示例：
+Example:
     python scripts/collect_multi_weather.py --samples-per-weather 200 --output-root ./data/carla
 
-脚本会在 data/carla/<weather_name>/images 与 masks 目录下保存 RGB 与语义分割 PNG。
+The script saves RGB and semantic segmentation PNG files in data/carla/<weather_name>/images and masks directories.
 """
 
 from __future__ import annotations
 
 import argparse
-import glob
 import logging
 import queue
 import random
 import sys
 from math import isclose
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, List, Tuple
 
 try:
     import carla
 except ImportError:
-    # 兼容从 CARLA 发行包运行：自动搜索 egg
+    # Compatible with running from CARLA distribution: auto-search for egg
     CARLA_EGG = sorted(Path(__file__).resolve().parents[2].glob("**/carla-*py3*.egg"))
     if CARLA_EGG:
         sys.path.append(str(CARLA_EGG[-1]))
@@ -35,9 +34,9 @@ LOGGER = logging.getLogger("collect_multi_weather")
 
 def _build_weather_presets() -> Dict[str, carla.WeatherParameters]:
     """
-    返回 {目录名: WeatherParameters}，覆盖 Clear/Rain/Fog 在
-    日间（Noon）、黄昏（Sunset）、夜间（Night）的组合。
-    目录名直接采用官方 WeatherParameters 名称，避免歧义。
+    Returns {directory_name: WeatherParameters}, covering Clear/Rain combinations
+    in daytime (Noon), sunset (Sunset), and nighttime (Night).
+    Directory names directly use official WeatherParameters names to avoid ambiguity.
     """
 
     candidate_names = [
@@ -53,7 +52,7 @@ def _build_weather_presets() -> Dict[str, carla.WeatherParameters]:
         "HardRainNoon",
         "HardRainSunset",
         "HardRainNight",
-        # Fog
+        # Fog (uncomment if needed)
         # "FoggyNoon",
         # "FoggySunset",
         # "FoggyNight",
@@ -63,12 +62,12 @@ def _build_weather_presets() -> Dict[str, carla.WeatherParameters]:
     for name in candidate_names:
         weather = getattr(carla.WeatherParameters, name, None)
         if weather is None:
-            LOGGER.warning("当前 CARLA 版本缺少 %s 预设，将跳过该天气", name)
+            LOGGER.warning("Current CARLA version missing %s preset, skipping this weather", name)
             continue
         presets[name] = weather
 
     if not presets:
-        raise RuntimeError("未能构建任何天气预设，请检查 CARLA 版本是否完整")
+        raise RuntimeError("Failed to build any weather presets, please check if CARLA version is complete")
     return presets
 
 
@@ -76,10 +75,10 @@ WEATHER_PRESETS: Dict[str, carla.WeatherParameters] = _build_weather_presets()
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="CARLA 多天气采集脚本")
+    parser = argparse.ArgumentParser(description="CARLA multi-weather collection script")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=2000)
-    parser.add_argument("--town", default=None, help="可选：指定地图名，如 Town10HD")
+    parser.add_argument("--town", default=None, help="Optional: specify map name, e.g., Town10HD")
     parser.add_argument("--seed", type=int, default=2024)
     parser.add_argument("--samples-per-weather", type=int, default=200)
     parser.add_argument("--camera-height", type=float, default=1.6)
@@ -91,12 +90,23 @@ def parse_args():
         "--weathers",
         nargs="*",
         default=list(WEATHER_PRESETS.keys()),
-        help="可选：只采集部分天气，使用WeatherParameters名称",
+        help="Optional: collect only specific weathers, use WeatherParameters names",
     )
-    parser.add_argument("--samples-interval", type=int, default=5, help="隔多少个 tick 记录一次样本")
-    parser.add_argument("--vehicle-filter", default="vehicle.audi.tt", help="spawn车型过滤器")
-    parser.add_argument("--warmup-ticks", type=int, default=60, help="切换天气后用于稳定的额外ticks")
-    parser.add_argument("--no-autopilot", action="store_true", help="关闭自动驾驶（需要自己控制车辆）")
+    parser.add_argument("--samples-interval", type=int, default=50, help="Record sample every N ticks")
+    parser.add_argument("--vehicle-filter", default="vehicle.audi.tt", help="Vehicle blueprint filter for spawning")
+    parser.add_argument("--warmup-ticks", type=int, default=60, help="Extra ticks for stabilization after weather change")
+    parser.add_argument(
+        "--respawn-warmup-ticks",
+        type=int,
+        default=40,
+        help="Extra ticks for trajectory stabilization after respawning vehicle (avoid saving frames before vehicle stabilizes)",
+    )
+    parser.add_argument("--no-autopilot", action="store_true", help="Disable autopilot (requires manual vehicle control)")
+    parser.add_argument(
+        "--save-color-mask",
+        action="store_true",
+        help="Also save CityScapesPalette color mask for visualization (training still uses Raw labels)",
+    )
     return parser.parse_args()
 
 
@@ -108,15 +118,25 @@ def _make_output_dirs(root: Path, weather: str) -> Tuple[Path, Path]:
     return img_dir, mask_dir
 
 
-def _spawn_vehicle(world: carla.World, blueprint_filter: str, seed: int) -> carla.Actor:
-    random.seed(seed)
+def _spawn_vehicle(
+    world: carla.World,
+    blueprint_filter: str,
+    rng: random.Random,
+    spawn_transform: carla.Transform | None = None,
+) -> carla.Actor:
+    """Spawn a vehicle at specified or random spawn point (uses unified RNG to avoid resetting random seed each time)."""
     blueprints = world.get_blueprint_library().filter(blueprint_filter)
-    blueprint = random.choice(blueprints)
-    spawn_points = world.get_map().get_spawn_points()
-    if not spawn_points:
-        raise RuntimeError("当前地图没有可用 spawn points")
-    transform = random.choice(spawn_points)
-    vehicle = world.spawn_actor(blueprint, transform)
+    if not blueprints:
+        raise RuntimeError(f"No vehicle blueprint found matching {blueprint_filter}")
+    blueprint = rng.choice(blueprints)
+
+    if spawn_transform is None:
+        spawn_points = world.get_map().get_spawn_points()
+        if not spawn_points:
+            raise RuntimeError("Current map has no available spawn points")
+        spawn_transform = rng.choice(spawn_points)
+
+    vehicle = world.spawn_actor(blueprint, spawn_transform)
     return vehicle
 
 
@@ -141,7 +161,7 @@ def _enable_synchronous(world: carla.World):
     settings = world.get_settings()
     if not settings.synchronous_mode:
         settings.synchronous_mode = True
-        settings.fixed_delta_seconds = 1 / 20.0
+        settings.fixed_delta_seconds = 1 / 20.0  # 20 Hz
         world.apply_settings(settings)
     return settings
 
@@ -151,7 +171,16 @@ def _restore_world(world: carla.World, original_settings: carla.WorldSettings):
 
 
 def _listen(sensor: carla.Sensor, q: queue.Queue):
-    sensor.listen(q.put)
+    """Listen to sensor output, drop old frames when queue is full to prevent memory overflow."""
+
+    def callback(data):
+        try:
+            q.put_nowait(data)
+        except queue.Full:
+            # Drop this frame if queue is full, maintain maxsize limit
+            pass
+
+    sensor.listen(callback)
 
 
 def _drain_queue(q: "queue.Queue[carla.SensorData]"):
@@ -163,7 +192,7 @@ def _drain_queue(q: "queue.Queue[carla.SensorData]"):
 
 
 def _weather_close(a: carla.WeatherParameters, b: carla.WeatherParameters, tol: float = 1.0) -> bool:
-    """判断两个天气参数是否足够接近。"""
+    """Check if two weather parameters are close enough."""
 
     keys = [
         "cloudiness",
@@ -186,7 +215,8 @@ def _apply_weather(
     max_retries: int = 5,
 ):
     """
-    确保天气真正生效；若连续多次失败则抛出异常而不是写入错误目录。
+    Ensure weather is actually applied; raise exception after multiple consecutive failures
+    instead of writing to wrong directory.
     """
 
     for attempt in range(1, max_retries + 1):
@@ -196,7 +226,7 @@ def _apply_weather(
         current = world.get_weather()
         if _weather_close(current, weather_params):
             LOGGER.info(
-                "天气 %s 已应用 (cloudiness=%.1f, rain=%.1f, sun_alt=%.1f)",
+                "Weather %s applied (cloudiness=%.1f, rain=%.1f, sun_alt=%.1f)",
                 weather_name,
                 current.cloudiness,
                 current.precipitation,
@@ -204,14 +234,14 @@ def _apply_weather(
             )
             return
         LOGGER.warning(
-            "天气 %s 未成功应用（尝试 %d/%d），当前 sun_alt=%.1f, rain=%.1f",
+            "Weather %s not successfully applied (attempt %d/%d), current sun_alt=%.1f, rain=%.1f",
             weather_name,
             attempt,
             max_retries,
             current.sun_altitude_angle,
             current.precipitation,
         )
-    raise RuntimeError(f"连续 {max_retries} 次无法设置天气 {weather_name}，请检查是否有其他脚本在修改天气")
+    raise RuntimeError(f"Failed to set weather {weather_name} after {max_retries} attempts, check if other scripts are modifying weather")
 
 
 def main():
@@ -219,7 +249,8 @@ def main():
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
     client = carla.Client(args.host, args.port)
-    client.set_timeout(30.0)
+    # Give tick more time to avoid timeout on large maps / first tick
+    client.set_timeout(120.0)
     world = client.get_world()
     if args.town:
         world = client.load_world(args.town)
@@ -228,59 +259,104 @@ def main():
 
     traffic_manager = client.get_trafficmanager()
     traffic_manager.set_synchronous_mode(True)
-    vehicle = None
+
+    vehicle: carla.Actor | None = None
     sensors: List[carla.Actor] = []
 
+    # Unified random number & spawn points (ensures reproducibility while avoiding same position every time)
+    rng = random.Random(args.seed)
+    spawn_points = world.get_map().get_spawn_points()
+    if not spawn_points:
+        raise RuntimeError("Current map has no available spawn points")
+
+    output_root = Path(args.output_root).resolve()
+
     try:
-        vehicle = _spawn_vehicle(world, args.vehicle_filter, args.seed)
-        if not args.no_autopilot:
-            vehicle.set_autopilot(True, traffic_manager.get_port())
-        rgb_cam, seg_cam = _spawn_camera(world, vehicle, args)
-        sensors.extend([rgb_cam, seg_cam])
+        rgb_cam: carla.Sensor | None = None
+        seg_cam: carla.Sensor | None = None
+        # Limit queue size to prevent memory overflow from frame accumulation
+        rgb_queue: "queue.Queue[carla.Image]" = queue.Queue(maxsize=1)
+        seg_queue: "queue.Queue[carla.Image]" = queue.Queue(maxsize=1)
 
-        rgb_queue: "queue.Queue[carla.Image]" = queue.Queue()
-        seg_queue: "queue.Queue[carla.Image]" = queue.Queue()
-        _listen(rgb_cam, rgb_queue)
-        _listen(seg_cam, seg_queue)
-
-        output_root = Path(args.output_root).resolve()
-        rng = random.Random(args.seed)
-        world.tick()  # prime sensors
+        # Pre-tick to activate sensors
+        world.tick()
 
         for weather_name in args.weathers:
             if weather_name not in WEATHER_PRESETS:
-                LOGGER.warning("跳过未知天气 %s", weather_name)
+                LOGGER.warning("Skipping unknown weather %s", weather_name)
                 continue
+
+            # Randomly select a spawn point before each weather
+            spawn_tf = rng.choice(spawn_points)
+
+            if vehicle is None:
+                # First time: actually spawn a vehicle
+                vehicle = _spawn_vehicle(world, args.vehicle_filter, rng, spawn_tf)
+                if not args.no_autopilot:
+                    vehicle.set_autopilot(True, traffic_manager.get_port())
+                rgb_cam, seg_cam = _spawn_camera(world, vehicle, args)
+                sensors.extend([rgb_cam, seg_cam])
+                _listen(rgb_cam, rgb_queue)
+                _listen(seg_cam, seg_queue)
+            else:
+                # Subsequent weathers: directly teleport vehicle to new spawn point
+                vehicle.set_transform(spawn_tf)
+
+            # Switch weather and warmup to ensure image/lighting stability
             _apply_weather(world, weather_name, WEATHER_PRESETS[weather_name], args.warmup_ticks)
             _drain_queue(rgb_queue)
             _drain_queue(seg_queue)
+
             img_dir, mask_dir = _make_output_dirs(output_root, weather_name)
-            LOGGER.info("开始采集 %s，目标样本数=%d", weather_name, args.samples_per_weather)
+            LOGGER.info("Starting collection for %s, target samples=%d", weather_name, args.samples_per_weather)
+
             captured = 0
             frame_skip = 0
+            segment_size = 3  # Change spawn point every 3 images
+
             while captured < args.samples_per_weather:
                 world.tick()
                 frame_skip = (frame_skip + 1) % max(args.samples_interval, 1)
                 if frame_skip != 0:
                     continue
+
                 try:
                     rgb_image = rgb_queue.get(timeout=5.0)
                     seg_image = seg_queue.get(timeout=5.0)
                 except queue.Empty:
-                    LOGGER.warning("等待传感器数据超时，重试...")
+                    LOGGER.warning("Timeout waiting for sensor data, retrying...")
                     continue
+
                 frame_id = rgb_image.frame
                 rgb_path = img_dir / f"{weather_name}_{frame_id:06d}.png"
                 mask_path = mask_dir / f"{weather_name}_{frame_id:06d}.png"
                 rgb_image.save_to_disk(str(rgb_path))
-                seg_image.save_to_disk(str(mask_path), carla.ColorConverter.CityScapesPalette)
+                # Save Raw (trainId) semantic labels for training
+                seg_image.save_to_disk(str(mask_path), carla.ColorConverter.Raw)
+                # Optional: also save a color visualization (CityScapesPalette)
+                if args.save_color_mask:
+                    vis_path = mask_dir / f"{weather_name}_{frame_id:06d}_color.png"
+                    seg_image.save_to_disk(str(vis_path), carla.ColorConverter.CityScapesPalette)
+
                 captured += 1
                 if captured % 20 == 0:
-                    LOGGER.info("%s 已采集 %d/%d", weather_name, captured, args.samples_per_weather)
-            LOGGER.info("%s 完成", weather_name)
+                    LOGGER.info("%s collected %d/%d", weather_name, captured, args.samples_per_weather)
+
+                # Change spawn point every segment_size samples to further increase scene diversity
+                if captured % segment_size == 0 and captured < args.samples_per_weather:
+                    new_tf = rng.choice(spawn_points)
+                    LOGGER.info("%s: collected %d samples, switching to new spawn point", weather_name, captured)
+                    vehicle.set_transform(new_tf)
+                    # After position refresh, wait a bit before continuing sampling to avoid vehicle/trajectory not yet stable
+                    for _ in range(max(args.respawn_warmup_ticks, 0)):
+                        world.tick()
+                    _drain_queue(rgb_queue)
+                    _drain_queue(seg_queue)
+
+            LOGGER.info("%s completed", weather_name)
 
     finally:
-        LOGGER.info("清理并恢复世界设置...")
+        LOGGER.info("Cleaning up and restoring world settings...")
         for sensor in sensors:
             try:
                 sensor.stop()
@@ -297,8 +373,15 @@ def main():
                     vehicle.destroy()
             except RuntimeError:
                 pass
-        traffic_manager.set_synchronous_mode(False)
-        _restore_world(world, original_settings)
+        # These two steps may also fail after timeout, so wrap in defensive layer
+        try:
+            traffic_manager.set_synchronous_mode(False)
+        except RuntimeError:
+            LOGGER.warning("traffic_manager cleanup failed (server may have disconnected), ignoring.")
+        try:
+            _restore_world(world, original_settings)
+        except RuntimeError:
+            LOGGER.warning("world settings restoration failed (server may have disconnected), ignoring.")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from datasets import CarlaWeatherDataset
-from eval import evaluate
+from eval import evaluate, evaluate_per_weather
 from models import get_deeplabv3_resnet50
 from utils.runner import (
     AverageMeter,
@@ -21,9 +21,9 @@ from utils.runner import (
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="训练CARLA天气基线模型")
-    parser.add_argument("--cfg", required=True, help="YAML配置文件路径")
-    parser.add_argument("--device", default=None, help="显卡选择，例如 cuda:0")
+    parser = argparse.ArgumentParser(description="Train CARLA weather baseline model")
+    parser.add_argument("--cfg", required=True, help="YAML config file path")
+    parser.add_argument("--device", default=None, help="GPU selection, e.g., cuda:0")
     return parser.parse_args()
 
 
@@ -97,6 +97,7 @@ def main():
     model = get_deeplabv3_resnet50(
         num_classes=int(cfg.get("num_classes", 20)),
         pretrained=bool(cfg.get("pretrained_backbone", True)),
+        use_gn=bool(cfg.get("use_group_norm", True)),  # Default to GroupNorm for small batch sizes
     )
     model.to(device)
 
@@ -109,7 +110,7 @@ def main():
         try:
             writer = create_summary_writer(log_root, experiment_name=cfg.get("experiment_name", "baseline"))
         except Exception as exc:  # pragma: no cover - tensorboard optional
-            print(f"TensorBoard 初始化失败，将跳过可视化: {exc}")
+            print(f"TensorBoard initialization failed, skipping visualization: {exc}")
 
     epochs = int(cfg.get("epochs", 30))
     best_miou = 0.0
@@ -129,15 +130,31 @@ def main():
                 num_classes=int(cfg.get("num_classes", 20)),
                 ignore_index=int(cfg.get("ignore_index", 255)),
             )
+            per_weather = None
+            if cfg.get("eval_per_weather", False):
+                per_weather = evaluate_per_weather(
+                    model=model,
+                    dataloader=val_loader,
+                    device=device,
+                    num_classes=int(cfg.get("num_classes", 20)),
+                    ignore_index=int(cfg.get("ignore_index", 255)),
+                )
             lr = optimizer.param_groups[0]["lr"]
+            per_weather_str = ""
+            if per_weather:
+                items = [f"{k}={v:.4f}" for k, v in sorted(per_weather.items())]
+                per_weather_str = " | per-weather: " + ", ".join(items)
             print(
-                f"Epoch [{epoch}/{epochs}] - train_loss: {train_loss:.4f}, val_mIoU: {val_miou:.4f}",
+                f"Epoch [{epoch}/{epochs}] - train_loss: {train_loss:.4f}, val_mIoU: {val_miou:.4f}{per_weather_str}",
                 flush=True,
             )
             if writer:
                 writer.add_scalar("train/loss", train_loss, epoch)
                 writer.add_scalar("val/mIoU", val_miou, epoch)
                 writer.add_scalar("lr", lr, epoch)
+                if per_weather:
+                    for weather, score in per_weather.items():
+                        writer.add_scalar(f"val/mIoU_{weather}", score, epoch)
                 writer.flush()
             if val_miou > best_miou:
                 best_miou = val_miou
@@ -151,12 +168,12 @@ def main():
                     },
                     save_path,
                 )
-                print(f"  >> 新最佳模型已保存至 {save_path}")
+                print(f"  >> New best model saved to {save_path}")
     finally:
         if writer:
             writer.close()
 
-    print(f"训练结束，最佳 val mIoU = {best_miou:.4f}")
+    print(f"Training finished, best val mIoU = {best_miou:.4f}")
 
 
 if __name__ == "__main__":

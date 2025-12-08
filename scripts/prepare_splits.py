@@ -8,18 +8,18 @@ from typing import List, Tuple
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="生成CARLA天气训练/验证/测试列表文件")
-    parser.add_argument("--data-root", default="./data", help="数据根目录，包含carla子目录")
-    parser.add_argument("--output", default="./data/splits", help="输出train/val/test列表的目录")
+    parser = argparse.ArgumentParser(description="Generate CARLA weather train/val/test list files")
+    parser.add_argument("--data-root", default="./data", help="Data root directory containing carla subdirectory")
+    parser.add_argument("--output", default="./data/splits", help="Output directory for train/val/test lists")
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--relative", action="store_true", help="在列表中使用相对路径")
+    parser.add_argument("--relative", action="store_true", help="Use relative paths in lists")
     parser.add_argument(
         "--weathers",
         nargs="*",
         default=None,
-        help="可选：只处理指定天气，如 clear rain night",
+        help="Optional: only process specified weathers, e.g., clear rain night",
     )
     return parser.parse_args()
 
@@ -27,7 +27,7 @@ def parse_args():
 def collect_samples(data_root: Path, weather_filter: List[str] | None):
     carla_dir = data_root / "carla"
     if not carla_dir.exists():
-        raise FileNotFoundError(f"未找到 {carla_dir}")
+        raise FileNotFoundError(f"Directory not found: {carla_dir}")
     weather_dirs = sorted(p for p in carla_dir.iterdir() if p.is_dir())
     samples: List[Tuple[Path, Path, str]] = []
     for weather_dir in weather_dirs:
@@ -47,7 +47,7 @@ def collect_samples(data_root: Path, weather_filter: List[str] | None):
                 continue
             samples.append((img_path.resolve(), mask_path.resolve(), weather))
     if not samples:
-        raise RuntimeError("未收集到任何样本，请检查数据路径")
+        raise RuntimeError("No samples collected, please check data paths")
     return samples
 
 
@@ -94,7 +94,7 @@ def main():
             base_dir=data_root,
             use_relative=args.relative,
         )
-    print(f"已在 {output_dir} 下生成 train/val/test 列表，共 {len(samples)} 个样本")
+    print(f"Generated train/val/test lists in {output_dir}, total {len(samples)} samples")
 
 
 if __name__ == "__main__":

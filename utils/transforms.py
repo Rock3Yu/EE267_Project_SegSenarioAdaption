@@ -18,7 +18,7 @@ def _ensure_hw(size: Sequence[int | float] | int) -> Tuple[int, int]:
     if isinstance(size, int):
         return size, size
     if len(size) != 2:
-        raise ValueError("image_size 只支持整数或形如(H, W)的序列")
+        raise ValueError("image_size only supports integer or sequence like (H, W)")
     height, width = int(size[0]), int(size[1])
     return height, width
 
@@ -27,7 +27,7 @@ def get_common_transforms(
     image_size: Sequence[int | float] | int,
     is_train: bool = True,
 ) -> Callable[[Image.Image, Image.Image], tuple[torch.Tensor, torch.Tensor]]:
-    """返回用于图像+mask的联合变换，保持mask最近邻插值。"""
+    """Return joint transform for image+mask, keeping nearest neighbor interpolation for mask."""
 
     height, width = _ensure_hw(image_size)
     resize_size = (height, width)
@@ -91,7 +91,7 @@ def _fog_aug(image: Image.Image, mask: Image.Image):
 
 
 def get_weather_specific_aug(weather: str) -> Callable[[Image.Image, Image.Image], tuple[Image.Image, Image.Image]]:
-    """根据天气类型返回简单的额外增强。"""
+    """Return simple additional augmentation based on weather type."""
 
     mapping = {
         "clear": _identity_aug,
