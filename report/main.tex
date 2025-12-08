@@ -20,6 +20,11 @@
 \usepackage{natbib}
 \bibliographystyle{unsrt}
 
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+
 \title{EE267 Final Project Report (Option 1)\\Semantic Segmentation for Autonomous Driving\\across Diverse Weather Conditions}
 
 
@@ -32,7 +37,7 @@
 \setlength{\parindent}{15pt}
 
 \begin{abstract}
-Semantic segmentation is essential for autonomous vehicle (AV) perception, providing pixel-level understanding of the driving environment. However, adverse weather conditions such as rain, fog, and snow can significantly impair segmentation accuracy, posing challenges to AV safety and reliability. This project investigates the robustness of state-of-the-art semantic segmentation models under diverse weather scenarios using a CARLA-simulated dataset with ground-truth annotations. We benchmark several popular architectures and introduce modifications aimed at improving performance in adverse conditions. Experimental results show consistent gains in challenging weather, demonstrating the effectiveness of our proposed enhancements. The GitHub repository is available here\footnote{\url{https://github.com/Rock3Yu/EE267_Project_SegSenarioAdaption}}.
+Autonomous vehicles (AVs) require reliable perception systems to operate safely in diverse environments. Semantic segmentation, which provides pixel-level scene understanding, is highly sensitive to adverse weather such as rain, fog, and snow. In this project, we investigate the robustness of semantic segmentation models across multiple weather conditions using a CARLA-simulated dataset with ground-truth annotations. We evaluate several models and explore training strategies designed to improve cross-weather generalization. Our results show that incorporating diverse weather conditions during training significantly enhances segmentation performance and robustness in challenging environments. The GitHub repository is available\footnote{\url{https://github.com/Rock3Yu/EE267_Project_SegSenarioAdaption}}.
 \end{abstract}
 
 \textbf{Keywords:} Autonomous Driving, Semantic Segmentation, Diverse Weather Conditions
@@ -171,21 +176,128 @@ All experiments are conducted on a machine with the following specifications:
 For more information about the experimental setup, please refer to our GitHub repository (README.md, requirements.txt and other files).
 
 \subsection{Results and Analysis}
+As the computational resources are limited, at the time of writing, we finished the experiments of DeepLab V3 under all three training settings. The results are shown in Table~\ref{tab:results}.
 
+\begin{table*}[t]
+\centering
+% 减小列间距以防止重叠
+\setlength{\tabcolsep}{3pt}
+\caption{The performance of DeepLab V3 under three training strategies (mIoU). The results are selected from the best epoch during training process.}
+\label{tab:results}
+\begin{tabular}{ccc}
 
+% --- 第一个表：保留完整索引 ---
+\begin{subtable}{0.34\linewidth}
+\centering
+\caption{Clear-Only (Setting 0)}
+\begin{tabular}{lccc}
+\toprule
+ & \textbf{Noon} & \textbf{Sunset} & \textbf{Night} \\ % 顺序改为 Noon, Sunset, Night
+\midrule
+\textbf{Clear}     & 0.779 & 0.743 & 0.709 \\
+\textbf{SoftRain}  & 0.722 & 0.690 & 0.489 \\
+\textbf{HardRain}  & 0.637 & 0.625 & 0.291 \\
+\midrule
+\textbf{Average}   & \multicolumn{3}{c}{0.6139} \\
+\bottomrule
+\end{tabular}
+\end{subtable}
 
-\subsection{Ablation Study}
+& % 表格之间的分隔
+
+% --- 第二个表：省略左侧索引列 ---
+\begin{subtable}{0.28\linewidth}
+\centering
+\caption{Mixed-Weather (Setting 1)}
+\begin{tabular}{ccc} % 改为3列
+\toprule
+\textbf{Noon} & \textbf{Sunset} & \textbf{Night} \\ % 顺序改为 Noon, Sunset, Night
+\midrule
+0.794 & 0.794 & 0.762 \\ 
+0.802 & 0.765 & 0.660 \\
+0.779 & 0.777 & 0.717 \\
+\midrule
+\multicolumn{3}{c}{Avg: 0.7759} \\ % 调整 Average 行的写法
+\bottomrule
+\end{tabular}
+\end{subtable}
+
+& % 表格之间的分隔
+
+% --- 第三个表：省略左侧索引列 ---
+\begin{subtable}{0.23\linewidth}
+\centering
+\caption{Curriculum (Setting 2)}
+\begin{tabular}{ccc} % 改为3列
+\toprule
+\textbf{Noon} & \textbf{Sunset} & \textbf{Night} \\ % 顺序改为 Noon, Sunset, Night
+\midrule
+0.796 & 0.797 & 0.748 \\
+0.800 & 0.765 & 0.647 \\
+0.778 & 0.776 & 0.707 \\
+\midrule
+\multicolumn{3}{c}{Avg: 0.7717} \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+
+\end{tabular}
+\end{table*}
+
+From the results, we observe some insightful trends. First, in the Clear-Only training setting, the model performs well on easy conditions (e.g., clear weather at noon) as expected, but the performance degrades significantly under adverse weather or nighttime conditions. The mIoU drops from 0.779 in clear noon to 0.291 in hard rain at night, indicating a substantial performance gap. This exhibits the domain transfer challenge caused by weather variations. Moreover, for both Mixed-Weather and Curriculum learning settings, the model shows improved robustness across all weather conditions compared to Clear-Only training. The most difficult scenario is hard rain at sunset, where rain and reflections severely obscure visual features, but the model still achieves reasonable performance above around 0.65 mIoU. The performance gains prove the training strategies we proposed are effective in enhancing model generalization under diverse weather conditions.
+
+The training curves of DeepLab V3 under different training settings are shown in Figure~\ref{fig:training_curves}. Easy to see that both Mixed-Weather and Curriculum learning settings converge to higher mIoU values compared to Clear-Only training, demonstrating the benefits of exposure to diverse weather conditions during training.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.\linewidth,height=6cm,keepaspectratio]{pics/results/Train_curve.png}
+    \caption{Training curves of DeepLab V3 under different training settings.}
+    \label{fig:training_curves}
+\end{figure}
+
+We also visualize the segmentation results of DeepLab V3 under different training settings. Here we show some comparative examples between HardRain at Night in the Figures~\ref{fig:segmentation_results_hardrain_night}.
+
+\begin{figure*}[t]
+    \centering
+    \begin{subfigure}{.95\linewidth}
+        \centering
+        \includegraphics[width=1.\linewidth,height=4cm,keepaspectratio]{pics/results/base_0/Hard/vis_hardnight.png}
+        \caption{Seetings 0: Clear-Only Training}
+    \end{subfigure}
+
+    \begin{subfigure}{.95\linewidth}
+        \centering
+        \includegraphics[width=1.\linewidth,height=4cm,keepaspectratio]{pics/results/base_1/Hard/vis_hardnight.png}
+        \caption{Settings 1: Mixed-Weather Training}
+    \end{subfigure}
+
+    \begin{subfigure}{.95\linewidth}
+        \centering
+        \includegraphics[width=1.\linewidth,height=4cm,keepaspectratio]{pics/results/base_2/Hard/vis_hardnight.png}
+        \caption{Settings 2: Weather-Aware Curriculum Learning}
+    \end{subfigure}
+    \caption{Segmentation results of DeepLab V3 under HardRain at Night condition across different training settings.}
+    \label{fig:segmentation_results_hardrain_night}
+\end{figure*}
+
+The overall performance seems good under all three training settings, however, upon closer inspection, we observe that Clear-Only training could not accurately segment small and distant objects like pedestrians and signals.
 
 \section{Conclusion}\label{sec:conclusion}
+In this project, we investigated the robustness of semantic segmentation models for autonomous driving across diverse weather conditions. We collected a CARLA-simulated dataset with ground truth annotations under various weather and time settings. We evaluated the performance of DeepLab V3 under three different training strategies: Clear-Only Training, Mixed-Weather Training, and Weather-Aware Curriculum Learning. Our experimental results demonstrated that both Mixed-Weather and Curriculum learning strategies significantly improved segmentation performance under adverse weather conditions compared to Clear-Only training. The proposed training strategies effectively enhanced model generalization and robustness, mitigating the domain gap caused by weather variations.
 
+Future work includes extending the evaluation to other semantic segmentation models such as FCN and Lite R-ASPP, and more advanced models like transformer-based architectures. The ablation studies on different curriculum designs and sampling ratios can provide deeper insights into effective training strategies for diverse weather conditions.
 
-\newcolumn
+\newpage
 \section*{Acknowledgements}
 We would like to express our sincere gratitude to Professor Hang Qiu, our teaching assistants Shilpa Mukhopadhyay and all of the EE267 course staff for their invaluable support and guidance throughout this project.
 
 Wishing everyone a great winter break and a happy new year!
 
 \bibliography{references}
+
+% \newpage
+% \section*{Appendix}
+
 
 \end{multicols}
 \end{document}
