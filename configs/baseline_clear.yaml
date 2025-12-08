@@ -1,6 +1,9 @@
-base_cfg: configs/base.yaml
+base_cfg: base.yaml
 experiment_name: baseline_clear
-train_weathers: ["clear"]
-val_weathers: ["clear", "rain", "night"]
+train_weathers: ["clearnoon", "clearsunset", "clearnight"]
+val_weathers: ["clearnoon", "clearsunset", "clearnight",
+                "softrainnoon", "softrainsunset", "softrainnight",
+                "hardrainnoon", "hardrainsunset", "hardrainnight"]
 use_weather_aug: false
+eval_per_weather: true
 save_path: ./logs/checkpoints/baseline_clear.pth

@@ -1,68 +1,98 @@
 # Seg-Weather-Robustness
 
-基于 CARLA 的多天气语义分割小型研究项目，聚焦于**固定 DeepLabV3-ResNet50 Backbone + 天气感知训练策略**。仓库同时支持两条基线与天气 aware 课程学习方案，便于快速对比鲁棒性。
+A small research project on multi-weather semantic segmentation based on CARLA, focusing on **fixed DeepLabV3-ResNet50 backbone + weather-aware training strategies**. The repository supports both baseline methods and weather-aware curriculum learning approaches for quick robustness comparison.
 
-## 快速上手
+## Quick Start
 
 ```bash
-# 准备环境（示例）
+# Setup environment (example)
 conda create -n seg-weather python=3.10 -y
 conda activate seg-weather
 pip install torch torchvision pyyaml matplotlib tensorboard
 ```
 
-## 数据组织与划分
+## Data Organization and Splitting
 
-1. 启动 CARLA 服务器后，可运行 `python scripts/collect_multi_weather.py --samples-per-weather 200` 自动采集六种天气（脚本会在 `data/carla/<weather>` 下保存 RGB + 语义 mask）。更多细节见 `scripts/generate_carla_data.md`。
-2. 运行 `python scripts/prepare_splits.py --data-root ./data --output ./data/splits` 生成 `train/val/test` 列表（行格式：`img mask weather`）。
-3. 若已有自己的划分文件，将路径写入 YAML 配置中的 `train_list`、`val_list` 即可。
+1. After starting the CARLA server, run `python scripts/collect_multi_weather.py --samples-per-weather 200` to automatically collect data from 9 weather conditions (the script saves RGB + semantic masks in `data/carla/<weather>`). The script supports:
+   - Clear weather: ClearNoon, ClearSunset, ClearNight
+   - Soft rain: SoftRainNoon, SoftRainSunset, SoftRainNight
+   - Hard rain: HardRainNoon, HardRainSunset, HardRainNight
 
-## 训练命令
+2. Run `python scripts/prepare_splits.py --data-root ./data --output ./data/splits` to generate `train/val/test` list files (format: `img_path mask_path weather`).
 
-- Baseline 0（仅晴天）：
+3. If you already have your own split files, specify their paths in the YAML config using `train_list` and `val_list`.
+
+## Training Commands
+
+- **Baseline 0** (Clear weather only):
   ```bash
   python train/train_baseline.py --cfg configs/baseline_clear.yaml
   ```
-- Baseline 1（混合训练）：
+
+- **Baseline 1** (Mixed training):
   ```bash
   python train/train_baseline.py --cfg configs/baseline_mixed.yaml
   ```
-- Ours（课程 + 天气增强 + 加权采样）：
+
+- **Ours** (Curriculum learning + weather augmentation + weighted sampling):
   ```bash
   python train/train_weather_aware.py --cfg configs/ours_weather_aware.yaml
   ```
 
-训练脚本会在 `logs/checkpoints/` 下保存最佳 mIoU 的权重，可在配置中通过 `save_path` 自定义。
+Training scripts save the best mIoU checkpoint in `logs/checkpoints/` (or a custom path specified via `save_path` in the config).
 
-## TensorBoard 可视化
+## TensorBoard Visualization
 
-- 默认会把训练 loss、验证 mIoU、学习率等指标写入 `logs/tensorboard/<experiment_name>`。
-- 可在配置里通过 `tensorboard_log_dir` 更改输出路径。
-- 使用 `tensorboard --logdir logs/tensorboard`（或你自定义的目录）即可实时查看训练与 evaluation 曲线。
+- By default, training loss, validation mIoU, learning rate, and other metrics are logged to `logs/tensorboard/<experiment_name>`.
+- You can change the output path via `tensorboard_log_dir` in the config.
+- Use `tensorboard --logdir logs/tensorboard` (or your custom directory) to view training and evaluation curves in real-time.
 
-## 评估与可视化
+## Evaluation and Visualization
 
-- 整体 mIoU：使用 `eval/eval_segmentation.py` 中的 `evaluate`，或在训练脚本中直接复用。
-- 分天气 mIoU：调用 `evaluate_per_weather`，DataLoader 需返回 `batch["weather"]` 字段。
-- 预测可视化：`utils/visualization.py` 提供 `save_visual_comparison`，可生成「RGB / 多模型预测 / GT」拼图。
+- **Overall mIoU**: Use `evaluate` from `eval/eval_segmentation.py`, or reuse it directly in training scripts.
+- **Per-weather mIoU**: Call `evaluate_per_weather`; the DataLoader must return `batch["weather"]` field.
+- **Prediction visualization**: `utils/visualization.py` provides `save_visual_comparison` to generate "RGB / Model Predictions / GT" comparison images.
+- **Quick visualization script**: Use `python scripts/visualize_predictions.py --cfg <config> --ckpt <checkpoint> --list <split_file> --sample-idx <idx> --out <output.png>` to visualize predictions.
 
-## 目录结构
+## Directory Structure
 
 ```
-configs/                # YAML 配置
-datasets/               # CARLA 数据集定义
-models/                 # DeepLabV3 封装
-samplers/               # 天气加权采样器
-train/                  # 训练脚本（基线 & 天气 aware）
-eval/                   # mIoU 评估工具
-utils/                  # 通用变换、指标、runner、可视化
-scripts/                # 数据生成说明 + 划分脚本
-data/                   # 占位目录，放置CARLA数据
-logs/                   # 日志 & checkpoint 输出
+configs/                # YAML configuration files
+datasets/               # CARLA dataset definition
+models/                 # DeepLabV3 wrapper
+samplers/               # Weather-weighted sampler
+train/                  # Training scripts (baseline & weather-aware)
+eval/                   # mIoU evaluation utilities
+utils/                  # Common transforms, metrics, runner, visualization
+scripts/                # Data collection and splitting scripts
+  - collect_multi_weather.py    # CARLA data collection
+  - prepare_splits.py            # Generate train/val/test splits
+  - visualize_predictions.py    # Visualization tool
+data/                   # Placeholder directory for CARLA data
+logs/                   # Logs & checkpoint output
 ```
 
-## 备注
+## Key Features
 
-- 默认 `image_size` 为 `[512, 256]`（H, W），可在配置中修改。
-- Mask 需使用语义类别索引（0 ~ num_classes-1），背景/忽略值默认 255。
-- 可通过在 YAML 中添加 `curriculum` 字段自定义阶段式训练（详见 `train/train_weather_aware.py`）。
+- **Weather-aware curriculum learning**: Gradually introduce difficult weather conditions (clear → soft rain → hard rain + night)
+- **Weighted sampling**: Balance samples from different weather conditions during training
+- **Weather-specific augmentation**: Apply weather-appropriate data augmentation based on sample weather type
+- **Per-weather evaluation**: Track mIoU separately for each weather condition
+- **GroupNorm support**: Use GroupNorm instead of BatchNorm for better performance with small batch sizes
+
+## Configuration Notes
+
+- Default `image_size` is `[512, 512]` (H, W), can be modified in config.
+- Masks should use semantic class indices (0 ~ num_classes-1), with background/ignore value defaulting to 255.
+- You can customize staged training by adding a `curriculum` field in YAML (see `train/train_weather_aware.py` for details).
+- The curriculum learning approach uses three stages:
+  - Stage 1: Clear weather only
+  - Stage 2: Clear + soft rain
+  - Stage 3: All weathers (clear + soft rain + hard rain + night)
+
+## Requirements
+
+- Python 3.10+
+- PyTorch (with CUDA support recommended)
+- CARLA Simulator (for data collection)
+- See `requirements.txt` or install dependencies as shown in Quick Start

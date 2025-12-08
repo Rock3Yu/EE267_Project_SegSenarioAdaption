@@ -1,13 +1,36 @@
-base_cfg: configs/base.yaml
+base_cfg: base.yaml
 experiment_name: weather_aware_full
 use_weather_aug: true
 use_balanced_sampler: true
-all_weathers: ["clear", "rain", "night"]
-stage1_epochs: 12
-stage2_epochs: 9
-stage3_epochs: 9
-sampler_weights:
-  clear: 1.0
-  rain: 2.0
-  night: 3.0
-save_path: ./logs/checkpoints/weather_aware_full.pth
+
+all_weathers: [
+  "clearnoon", "clearsunset", "clearnight",
+  "softrainnoon", "softrainsunset", "softrainnight",
+  "hardrainnoon", "hardrainsunset", "hardrainnight"
+]
+stage1_epochs: 10
+stage2_epochs: 20
+stage3_epochs: 70
+
+stage1_weathers: ["clearnoon", "clearsunset", "clearnight"]
+stage2_weathers: [
+  "clearnoon", "clearsunset", "clearnight",
+  "softrainnoon", "softrainsunset", "softrainnight"
+]
+stage3_weathers: [
+  "clearnoon", "clearsunset", "clearnight",
+  "softrainnoon", "softrainsunset", "softrainnight",
+  "hardrainnoon", "hardrainsunset", "hardrainnight"
+]
+
+# sampler_weights:
+#   clear: 1.0
+#   rain: 2.0
+#   night: 3.0
+
+stage1_weights: {"clear": 1.0}
+stage2_weights: {"clear": 1.0, "rain": 2.0}
+stage3_weights: {"clear": 1.0, "rain": 3.0, "night": 5.0}
+min_lr: 1e-6
+eval_per_weather: true
+save_path: ./logs/checkpoints/weather_aware_full_v2.pth

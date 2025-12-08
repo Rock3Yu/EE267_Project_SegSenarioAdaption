@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Dict, Iterable
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -15,9 +16,22 @@ def evaluate(
     device: torch.device,
     num_classes: int,
     ignore_index: int = 255,
+    verbose: bool = False,
 ) -> float:
-    """整体 mIoU 评估。"""
-
+    """
+    Overall mIoU evaluation.
+    
+    Args:
+        model: Segmentation model
+        dataloader: Validation data loader
+        device: Device
+        num_classes: Number of classes
+        ignore_index: Ignore index
+        verbose: Whether to print detailed information
+    
+    Returns:
+        mIoU score
+    """
     meter = SegmentationMetricMeter(num_classes=num_classes, ignore_index=ignore_index)
     model.eval()
     with torch.no_grad():
@@ -28,6 +42,16 @@ def evaluate(
             preds = torch.argmax(logits, dim=1)
             meter.update(preds, masks)
     scores = meter.get_scores()
+    
+    if verbose:
+        print(f"  [Evaluation Details]")
+        print(f"    Number of classes that actually appear: {scores.get('num_valid_classes', 'N/A')}/{num_classes}")
+        class_iou = scores["per_class_iou"]
+        for c in range(min(5, num_classes)):
+            iou_val = class_iou[c]
+            iou_str = f"{iou_val:.4f}" if not np.isnan(iou_val) else "not present"
+            print(f"    Class {c:2d} IoU: {iou_str}")
+    
     return float(scores["mIoU"])
 
 
@@ -38,7 +62,7 @@ def evaluate_per_weather(
     num_classes: int,
     ignore_index: int = 255,
 ) -> Dict[str, float]:
-    """按天气分别计算 mIoU。"""
+    """Compute mIoU separately for each weather."""
 
     meters: Dict[str, SegmentationMetricMeter] = defaultdict(
         lambda: SegmentationMetricMeter(num_classes=num_classes, ignore_index=ignore_index)
